@@ -1,4 +1,5 @@
 import json
+import re
 
 from groq import APIError, Groq
 
@@ -8,6 +9,7 @@ from src.app.schemas.voice import InstructionPayload
 ALLOWED_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 TASKS_COLLECTION_ENDPOINT = "/tasks"
 TASK_ITEM_ENDPOINT = "/tasks/{task_id}"
+TASK_ITEM_ENDPOINT_PATTERN = re.compile(r"^/tasks/(?P<task_id>\d+)$")
 
 SYSTEM_PROMPT = """
 You convert a spoken task-management instruction into routing JSON for a FastAPI backend.
@@ -63,18 +65,21 @@ def _normalize_instruction_payload(payload: object) -> InstructionPayload:
     if not isinstance(payload, dict):
         raise InstructionRoutingError("Instruction payload must be a JSON object.")
 
-    endpoint = str(payload.get("endpoint", "")).strip()
+    raw_endpoint = str(payload.get("endpoint", "")).strip()
     method = str(payload.get("method", "")).strip().upper()
     raw_params = payload.get("params", {})
+    endpoint, endpoint_task_id = _normalize_endpoint(raw_endpoint)
 
     if method not in ALLOWED_METHODS:
         raise InstructionRoutingError(f"Unsupported method returned by Groq: {method or 'missing'}.")
     if endpoint not in {TASKS_COLLECTION_ENDPOINT, TASK_ITEM_ENDPOINT}:
-        raise InstructionRoutingError(f"Unsupported endpoint returned by Groq: {endpoint or 'missing'}.")
+        raise InstructionRoutingError(f"Unsupported endpoint returned by Groq: {raw_endpoint or 'missing'}.")
     if not isinstance(raw_params, dict):
         raise InstructionRoutingError("Instruction params must be an object.")
 
     params = dict(raw_params)
+    if endpoint_task_id is not None and "task_id" not in params:
+        params["task_id"] = endpoint_task_id
 
     if endpoint == TASKS_COLLECTION_ENDPOINT and method == "GET":
         params = {}
@@ -90,6 +95,19 @@ def _normalize_instruction_payload(payload: object) -> InstructionPayload:
         raise InstructionRoutingError("Groq returned an endpoint/method combination that is not supported.")
 
     return InstructionPayload(endpoint=endpoint, method=method, params=params)
+
+
+def _normalize_endpoint(endpoint: str) -> tuple[str, int | None]:
+    if endpoint == TASKS_COLLECTION_ENDPOINT:
+        return endpoint, None
+    if endpoint == TASK_ITEM_ENDPOINT:
+        return endpoint, None
+
+    match = TASK_ITEM_ENDPOINT_PATTERN.fullmatch(endpoint)
+    if match:
+        return TASK_ITEM_ENDPOINT, int(match.group("task_id"))
+
+    return endpoint, None
 
 
 def _normalize_task_create_params(params: dict[str, object]) -> dict[str, object]:
