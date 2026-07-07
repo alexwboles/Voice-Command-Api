@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from src.app.schemas.voice import InstructionPayload, InstructionRequest
+from src.app.services.instruction_service import InstructionRoutingError, route_instruction as route_text_instruction
 
 router = APIRouter(tags=["instruction"])
 
@@ -9,8 +10,7 @@ router = APIRouter(tags=["instruction"])
 def route_instruction(
     payload: InstructionRequest,
 ) -> InstructionPayload:
-    _ = payload
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Template endpoint pending implementation: POST /instruction",
-    )
+    try:
+        return route_text_instruction(payload.transcription)
+    except InstructionRoutingError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
