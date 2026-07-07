@@ -193,6 +193,21 @@ If the transcription is correct but the action is wrong, the problem is in `/ins
 
 ---
 
+## Demo assets
+
+- Full transcript screenshot: [demo-screenshots/full-successful-transcript.png](demo-screenshots/full-successful-transcript.png)
+- Screenshot notes and embedded image: [DEMO_SCREENSHOTS.md](DEMO_SCREENSHOTS.md)
+
+### Demo command sequence used
+
+1. `add buy groceries to my list`
+2. `show my tasks`
+3. `change the title of task 1 to buy groceries and fruit`
+4. `mark task 1 as done`
+5. `remove task 1 from my list`
+
+---
+
 ## 📦 How to submit this project
 
 1. Push your solution to your GitHub repository.
